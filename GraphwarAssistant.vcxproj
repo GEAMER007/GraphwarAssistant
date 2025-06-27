@@ -22,7 +22,7 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{fc74a540-28e1-4c92-972e-1adf423b0526}</ProjectGuid>
-    <RootNamespace>GraphWarAim</RootNamespace>
+    <RootNamespace>GraphwarAssistant</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -70,6 +70,12 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetName>gw_assistant</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetName>gw_assistant</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -123,17 +129,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="getwindow.cpp" />
-    <ClCompile Include="gui_init.cpp" />
-    <ClCompile Include="gui_proc.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\getwindow.cpp" />
+    <ClCompile Include="src\gui_init.cpp" />
+    <ClCompile Include="src\gui_proc.cpp" />
+    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="equations.hpp" />
-    <ClInclude Include="getwindow.hpp" />
-    <ClInclude Include="globals.hpp" />
-    <ClInclude Include="helpers.hpp" />
-    <ClInclude Include="gui.hpp" />
+    <ClInclude Include="src\equations.hpp" />
+    <ClInclude Include="src\getwindow.hpp" />
+    <ClInclude Include="src\globals.hpp" />
+    <ClInclude Include="src\helpers.hpp" />
+    <ClInclude Include="src\gui.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

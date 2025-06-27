@@ -2,7 +2,7 @@
 #include "globals.hpp"
 
 #define in_box(px,py,bx,by,bw,bh) (px >= bx && px <= bx + bw && py >= by && py <= by + bh)
-#define distsq(ax,ay,az,bx,by,bz) (ax-bx) * (ax-bx) + (ay-by) * (ay-by) + (az-bz) * (az-bz)
+
 inline bool get_mouse_position( HWND hwnd, int &x, int &y )
 {
 	POINT pt;
