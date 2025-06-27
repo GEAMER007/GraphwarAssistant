@@ -11,33 +11,33 @@ HBITMAP  hbm_mem;
 void init_resources( )
 {
     brush_background = CreateSolidBrush( COLOR_BG );
+    brush_transparent = CreateSolidBrush( 0xdedbef );
+    brush_red = ( HBRUSH ) CreateSolidBrush( RGB( 255, 0, 0 ) );
     pen_background = CreatePen( PS_SOLID, 1, COLOR_BG );
     pen_green = CreatePen( PS_SOLID, 1, 0x00'FF'00 );
-    brush_red = ( HBRUSH ) CreateSolidBrush( RGB( 255, 0, 0 ) );
-    brush_transparent = CreateSolidBrush( 0xdedbef );
-
 }
 
 void cleanup_resources( )
 {
     DeleteObject( brush_background );
+    DeleteObject( brush_transparent );
     DeleteObject( brush_red );
+    DeleteObject( pen_background );
     DeleteObject( pen_green );
 }
 
-void init_double_buffer( HWND hWnd )
+void init_double_buffer( HWND hwnd )
 {
     init_resources( );
 
-    HDC hdc_win = GetDC( hWnd );
+    HDC hdc_win = GetDC( hwnd );
     hdc_mem = CreateCompatibleDC( hdc_win );
     hbm_mem = CreateCompatibleBitmap( hdc_win, target_width, target_height );
     SelectObject( hdc_mem, hbm_mem );
-    ReleaseDC( hWnd, hdc_win );
+    ReleaseDC( hwnd, hdc_win );
 
     RECT rc = { 0, 0, target_width, target_height };
     FillRect( hdc_mem, &rc, brush_transparent );
-
 }
 
 void cleanup_double_buffer( ) 
@@ -54,7 +54,7 @@ unsigned long __stdcall init_gui( LPVOID lparam )
     WNDCLASSEX wc = { sizeof( WNDCLASSEX ) };
     wc.lpfnWndProc = wnd_proc;
     wc.hInstance = hInst;
-    wc.lpszClassName = L"loading_window";
+    wc.lpszClassName = L"graphwar_cheat";
     RegisterClassExW( &wc );
 
     int screen_x = ( GetSystemMetrics( SM_CXSCREEN ) - initial_width ) / 2;
@@ -73,7 +73,6 @@ unsigned long __stdcall init_gui( LPVOID lparam )
     init_double_buffer( g_hwnd );
     SetTimer( g_hwnd, 1, DWORD( timer_interval ), nullptr );
 
-
     MSG msg;
     while ( GetMessageW( &msg, nullptr, 0, 0 ) ) 
     {
@@ -81,7 +80,6 @@ unsigned long __stdcall init_gui( LPVOID lparam )
         DispatchMessageW( &msg );
         if ( full_exit )
         {
-            printf( "exiting\n" );
             exit( 0 );
         }
     }
@@ -169,7 +167,7 @@ LRESULT CALLBACK wnd_proc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 
             if ( pt.x >= 0 && pt.x < ( curr_width * 0.75 ) && pt.y >= 0 && pt.y < 20 )
                 return HTCAPTION;
-            //}
+
             return hit;
         }
 

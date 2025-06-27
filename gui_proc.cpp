@@ -54,8 +54,9 @@ int confirm_shooter_find_origin( HDC &hdc, int &cx, int &cy, int &ox, int &oy, c
 	return 1;
 }
 
-const wchar_t *s_waiting = L"Waiting for game...";
-const wchar_t *s_pickplayer = L"Click on shooter...";
+const char *s_waiting = "Waiting for game...";
+const char *s_pickplayer = "Click on shooter...";
+
 
 const int l_arena_x = 10, l_arena_y = 25;
 
@@ -66,7 +67,7 @@ inline double s2a_x( int x )
 
 inline double s2a_y( int y )
 {
-	return ( y - l_arena_y - arena_h / 2 ) / -15.0;
+	return ( y - l_arena_y - arena_h / 2 ) / -15.4;
 }
 
 struct trajectory
@@ -91,12 +92,24 @@ static void trajectory_to_steps( trajectory &tr, std::string &equation )
 	}
 }
 
+static bool maybe_check_graphwar( bool &update )
+{
+	static auto last_check = 0ull;
+	static bool last_running = false;
 
+
+	if ( GetTickCount64() - last_check < 1000 )
+	{
+		update = false;
+		return last_running;
+	}
+	last_check = GetTickCount64( );
+	update = true;
+	return last_running = check_graphwar_running( g_target_window );
+}
 void draw_frame( HDC &hdc )
 {
-
 	static int mx, my;
-	
 	get_mouse_position( g_hwnd, mx, my );
 
 	bool click = clicked_this_frame( g_hwnd );
@@ -110,24 +123,53 @@ void draw_frame( HDC &hdc )
 	}
 	SelectObject( hdc, old_brush );
 
+	static const char *message = nullptr;
+	if ( message )
+	{
+		TextOutA( hdc, 10, 10, message, strlen( message ) );
+	}
+	
+	static auto check_iteration = 0;
+	bool update;
+	if ( !maybe_check_graphwar( update ) )
+	{
+		static char s_scanning[ 64 ];
+		if ( update || message != s_scanning )
+		{
+			check_iteration++;
+			message = s_scanning;
+		}
+		if ( check_iteration == 999 )
+		{
+			exit( 5 );
+		}
+		g_target_window = nullptr;
+		sprintf_s( s_scanning, 64, "[%03d] Scanning for Graphwar window", check_iteration );
+		return;
+	}
+	else
+	{
+		check_iteration = 0;
+	}
+
 	auto is_in_game = copy_arena_buffer( g_target_window, hdc, l_arena_x, l_arena_y );
 
 	if ( !is_in_game )
 	{
-		TextOut( hdc, 10, 10, s_waiting, lstrlenW( s_waiting ) );
+		message = s_waiting;
 		return;
+		
 	}
 
 	if ( in_box( mx, my, l_arena_x, l_arena_y, arena_w, arena_h ) )
 	{
-		static wchar_t buffer[ 32 ] = {};
-		swprintf( buffer, 32, L"x:%f y:%f", s2a_x( mx ), s2a_y( my ) );
-		TextOut( hdc, 10, l_arena_y + arena_h + 10, buffer, lstrlenW( buffer ) );
+		static char buffer[ 32 ] = {};
+		printf_s( buffer, 32, "x:%f y:%f", s2a_x( mx ), s2a_y( my ) );
+		TextOutA( hdc, 10, l_arena_y + arena_h + 10, buffer, strlen( buffer ) );
 	}
 	else
 	{
 		click = false;
-
 	}
 	
 	static trajectory tr;
@@ -136,15 +178,15 @@ void draw_frame( HDC &hdc )
 	{
 		case 0:
 		{
-			TextOut( hdc, 10, 10, s_pickplayer, lstrlenW( s_pickplayer ) );
-
+			message = s_pickplayer;
 			if ( click )
 			{
 				auto fail = confirm_shooter_find_origin( hdc, mx, my, tr.ox, tr.oy, tr.dir );
 				tr.state = 1;
+				message = "";
 				if ( fail )
 				{
-					MessageBoxA( g_hwnd, fail == 1 ? "Shooter not found on cursor" : "Shooter is not active",  "Bad selection", MB_OK | MB_ICONERROR );
+					message = fail == 1 ? "Shooter not found on cursor" : "Shooter is not active";
 				}
 			}
 			break;
@@ -155,6 +197,7 @@ void draw_frame( HDC &hdc )
 			{
 				tr.vertices.clear( );
 				tr.state = 0;
+				tr.next_up = false;
 				return;
 			}
 
@@ -162,8 +205,7 @@ void draw_frame( HDC &hdc )
 			{
 				if ( tr.vertices.size( ) < 2 )
 				{
-					MessageBoxA( g_hwnd, "Not enough vertices", "Cant plot", MB_ICONERROR | MB_OK );
-					Sleep( 200 );
+					message = "Not enough vertices";
 					return;
 				}
 				tr.vertices.insert( tr.vertices.begin( ), { tr.ox, tr.oy } );
@@ -175,7 +217,7 @@ void draw_frame( HDC &hdc )
 				
 				if ( ctrl_c( equation.size( ) + 1, equation.data( ) ) )
 				{
-					MessageBoxA( g_hwnd, "Trajectory copied to clipboard", "Success", MB_OK | MB_ICONINFORMATION );
+					message = "Trajectory copied to clipboard";
 				}
 
 				return;
@@ -208,7 +250,7 @@ void draw_frame( HDC &hdc )
 
 			auto tx = mx, ty = my;
 
-			int2 last_vertex = tr.vertices.empty( ) ? int2{tr.ox, tr.oy} : tr.vertices.back( );
+			int2 last_vertex = tr.vertices.empty( ) ? int2 { tr.ox, tr.oy } : tr.vertices.back( );
 			tx = last_vertex.x * tr.next_up + mx * !tr.next_up;
 			ty = last_vertex.y * !tr.next_up + my * tr.next_up;
 			
@@ -224,7 +266,7 @@ void draw_frame( HDC &hdc )
 			}
 			else if ( click )
 			{
-				MessageBoxA( g_hwnd, "Cant go backwards", "Wrong direction", MB_OK | MB_ICONERROR );
+				message = "Cant go backwards";
 			}
 
 			SelectObject( hdc, old_pen );
@@ -236,6 +278,8 @@ void draw_frame( HDC &hdc )
 			{
 				tr.vertices.clear( );
 				tr.state = 0;
+				tr.next_up = false;
+
 				return;
 			}
 			std::string equation = "0";
@@ -253,7 +297,6 @@ void draw_frame( HDC &hdc )
 			SelectObject( hdc, old_pen );
 
 			trajectory_to_steps( tr, equation );
-			
 			TextOutA( hdc, 10, l_arena_y + arena_h + 30, equation.c_str(), equation.length() );
 			break;
 		}

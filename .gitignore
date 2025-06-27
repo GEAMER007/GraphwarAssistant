@@ -1,1 +1,4 @@
 .vs
+*.pdb
+x64/Debug
+GraphWarAim

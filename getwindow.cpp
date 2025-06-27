@@ -1,5 +1,6 @@
 #include "getwindow.hpp"
 
+HWND g_target_window;
 bool check_graphwar_running( HWND &final_hwnd )
 {
     std::vector<HWND> matchingWindows;
@@ -40,8 +41,14 @@ bool check_graphwar_running( HWND &final_hwnd )
 
 bool copy_arena_buffer( HWND &hwnd, HDC &our_dc, int x, int y )
 {
-    static HDC hdc = GetDC( hwnd );
-    if ( !hdc ) 
+    static HWND current_hwnd;
+    static HDC hdc;
+    if ( current_hwnd != hwnd )
+    {
+		current_hwnd = hwnd;
+        hdc = GetDC( hwnd );
+    }
+    if ( !hdc )
     {
         return false;
     }
@@ -49,7 +56,7 @@ bool copy_arena_buffer( HWND &hwnd, HDC &our_dc, int x, int y )
     RECT rc;
     GetClientRect( hwnd, &rc );
     
-	// if pixel at arena(0,0) is main-menu green then the game has not started yet
+	// if pixel at arena(250,0) is main-menu green then the game has not started yet
     auto arena_0_0 = GetPixel( hdc, arena_x + 250, arena_y);
     if ( arena_0_0 == 0x9B'D7'9E )
     {
