@@ -1,4 +1,4 @@
 .vs
 *.pdb
-x64/Debug
+x64/Debug/GraphWarAim.exe
 GraphWarAim
