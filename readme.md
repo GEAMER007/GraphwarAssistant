@@ -2,6 +2,11 @@
 
 This application generates equations for the game **Graphwar** that accurately approximate the path you want your graph to follow. The user plots a path on the screen, and the tool converts it into a chain of step functions, returning an expression that can be directly inserted into the game. The expression is automatically copied to the clipboard for easy use.
 
+
+Demo video
+
+[![Demo Video](https://img.youtube.com/vi/AzH8lNFI0wM/0.jpg)](https://www.youtube.com/watch?v=AzH8lNFI0wM)
+
 ---
 
 ## ✨ Features
