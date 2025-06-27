@@ -1,0 +1,7 @@
+﻿  gui_init.cpp
+  gui_proc.cpp
+C:\Users\Nikifor\source\repos\RSA2048\GraphWarAim\gui_proc.cpp(176,35): warning C4267: аргумент: преобразование из "size_t" в "unsigned long"; возможна потеря данных
+C:\Users\Nikifor\source\repos\RSA2048\GraphWarAim\gui_proc.cpp(257,82): warning C4267: аргумент: преобразование из "size_t" в "int"; возможна потеря данных
+  main.cpp
+  Создание кода...
+  GraphWarAim.vcxproj -> C:\Users\Nikifor\source\repos\RSA2048\GraphWarAim\x64\Debug\GraphWarAim.exe
