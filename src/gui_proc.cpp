@@ -170,7 +170,7 @@ void draw_frame( HDC &hdc )
 	//	maybe_parse_arena( hdc );
 	//}
 	//SelectObject( hdc, old_brush );
-	//parse_arena( hdc );
+	parse_arena( hdc );
 	
 	static trajectory tr;
 

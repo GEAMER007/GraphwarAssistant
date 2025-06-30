@@ -4,11 +4,33 @@
 struct int2
 {
     int x, y;
+
+    inline bool operator==( const int2 &other ) const
+    {
+        return x == other.x && y == other.y;
+    }
+    inline int2 operator+( const int2 &other ) const
+    {
+        return { x + other.x,y + other.y };
+    }
     inline static int dist_sq( const int2 &a, const int2 &b )
     {
 		return ( a.x - b.x ) * ( a.x - b.x ) + ( a.y - b.y ) * ( a.y - b.y );
     }
 };
+
+namespace std {
+    template <>
+    struct hash<int2>
+    {
+        std::size_t operator()( const int2 &v ) const noexcept
+        {
+            std::size_t h1 = std::hash<int>( )( v.x );
+            std::size_t h2 = std::hash<int>( )( v.y );
+            return h1 ^ ( h2 << 1 ); // simple hash combine
+        }
+    };
+}
 
 struct trajectory
 {
