@@ -133,6 +133,7 @@
     <ClCompile Include="src\gui_init.cpp" />
     <ClCompile Include="src\gui_proc.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\pathfinder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\equations.hpp" />
@@ -140,6 +141,7 @@
     <ClInclude Include="src\globals.hpp" />
     <ClInclude Include="src\helpers.hpp" />
     <ClInclude Include="src\gui.hpp" />
+    <ClInclude Include="src\pathfinder.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

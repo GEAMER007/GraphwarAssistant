@@ -1,5 +1,27 @@
 #pragma once
-#include "globals.hpp"
+#include "equations.hpp"
+
+struct int2
+{
+    int x, y;
+    inline static int dist_sq( const int2 &a, const int2 &b )
+    {
+		return ( a.x - b.x ) * ( a.x - b.x ) + ( a.y - b.y ) * ( a.y - b.y );
+    }
+};
+
+struct trajectory
+{
+    int state = 0;
+    char dir;
+    int ox, oy;
+    bool next_up = false;
+    std::vector<int2> vertices;
+};
+
+//================================//
+//===========GUI utils============//
+//================================//
 
 #define in_box(px,py,bx,by,bw,bh) (px >= bx && px <= bx + bw && py >= by && py <= by + bh)
 
@@ -34,11 +56,6 @@ inline bool clicked_this_frame( HWND& hwnd )
 
 	return false;
 }
-
-struct int2
-{
-	int x, y;
-};
 
 inline bool ctrl_c( unsigned long bytes, const char* string )
 {
@@ -81,4 +98,50 @@ inline bool ctrl_c( unsigned long bytes, const char* string )
 
     CloseClipboard( );
     return true;
+}
+
+inline int color_dist_sq( uint32_t c1, uint32_t c2 )
+{
+    int r1 = ( c1 >> 16 ) & 0xFF;
+    int g1 = ( c1 >> 8 ) & 0xFF;
+    int b1 = c1 & 0xFF;
+    int r2 = ( c2 >> 16 ) & 0xFF;
+    int g2 = ( c2 >> 8 ) & 0xFF;
+    int b2 = c2 & 0xFF;
+	return ( r1 - r2 ) * ( r1 - r2 ) + ( g1 - g2 ) * ( g1 - g2 ) + ( b1 - b2 ) * ( b1 - b2 );
+}
+
+inline int is_grayscale( uint32_t color )
+{
+    int r = ( color >> 16 ) & 0xFF;
+    int g = ( color >> 8 ) & 0xFF;
+    int b = color & 0xFF;
+    return ( r == g && g == b );
+}
+
+//================================//
+//=====Coordinate translators=====//
+//================================//
+
+inline double s2a_x( int x )
+{
+    return ( x - l_arena_x - arena_w / 2 ) / 15.4;
+}
+
+inline double s2a_y( int y )
+{
+    return ( y - l_arena_y - arena_h / 2 ) / -15.4;
+}
+
+static void trajectory_to_steps( trajectory &tr, std::string &equation )
+{
+    auto i = 1;
+    auto vs = tr.vertices.begin( );
+
+    for ( ; i < tr.vertices.size( ) - 1; i += 2 )
+    {
+        auto c = -s2a_x( ( vs + i )->x );
+        auto k = s2a_y( ( vs + i + 1 )->y ) - s2a_y( ( vs + i )->y );
+        equation += "+" + make_step( k, c );
+    }
 }

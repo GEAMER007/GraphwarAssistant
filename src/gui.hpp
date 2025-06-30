@@ -14,7 +14,6 @@ extern HPEN     pen_background;
 extern HPEN     pen_green;
 extern HDC      hdc_mem;
 extern HBITMAP  hbm_mem;
-extern HWND     g_hwnd;
 
 static const int initial_width = 790;
 static const int initial_height = 600;

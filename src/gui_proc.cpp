@@ -1,7 +1,9 @@
 #include "gui.hpp"
 #include "getwindow.hpp"
 #include "helpers.hpp"
-#include "equations.hpp"
+#include "pathfinder.hpp"
+
+unsigned long long curtime;
 
 int confirm_shooter_find_origin( HDC &hdc, int &cx, int &cy, int &ox, int &oy, char &dir )
 {
@@ -54,61 +56,47 @@ int confirm_shooter_find_origin( HDC &hdc, int &cx, int &cy, int &ox, int &oy, c
 	return 1;
 }
 
-const char *s_waiting = "Waiting for game...";
-const char *s_pickplayer = "Click on shooter...";
-
-
-const int l_arena_x = 10, l_arena_y = 25;
-
-inline double s2a_x( int x )
-{
-	return ( x - l_arena_x - arena_w / 2 ) / 15.4;
-}
-
-inline double s2a_y( int y )
-{
-	return ( y - l_arena_y - arena_h / 2 ) / -15.4;
-}
-
-struct trajectory
-{
-	int state = 0;
-	char dir;
-	int ox, oy;
-	bool next_up = false;
-	std::vector<int2> vertices;
-};
-
-static void trajectory_to_steps( trajectory &tr, std::string &equation )
-{
-	auto i = 1;
-	auto vs = tr.vertices.begin( );
-
-	for ( ; i < tr.vertices.size( ) - 1; i += 2 )
-	{
-		auto c = -s2a_x( ( vs + i )->x );
-		auto k = s2a_y( ( vs + i + 1 )->y ) - s2a_y( ( vs + i )->y );
-		equation += "+" + make_step( k, c );
-	}
-}
-
 static bool maybe_check_graphwar( bool &update )
 {
 	static auto last_check = 0ull;
 	static bool last_running = false;
 
 
-	if ( GetTickCount64() - last_check < 1000 )
+	if ( curtime - last_check < 1000 )
 	{
 		update = false;
 		return last_running;
 	}
-	last_check = GetTickCount64( );
+	last_check = curtime;
 	update = true;
 	return last_running = check_graphwar_running( g_target_window );
 }
+
+static void maybe_parse_arena( HDC& hdc )
+{
+	static auto last_check = 0ull;
+	static bool last_running = false;
+
+
+	if ( curtime - last_check < 1000 )
+	{
+		//update = false;
+		//return last_running;
+		return;
+	}
+	last_check = curtime;
+	//update = true;
+	//return last_running = check_graphwar_running( g_target_window );
+	parse_arena( hdc );
+}
+
+const char *s_waiting = "Waiting for game...";
+const char *s_pickplayer = "Click on shooter...";
+
 void draw_frame( HDC &hdc )
 {
+	curtime = GetTickCount64( );
+
 	static int mx, my;
 	get_mouse_position( g_hwnd, mx, my );
 
@@ -171,6 +159,18 @@ void draw_frame( HDC &hdc )
 	{
 		click = false;
 	}
+
+	// work in progress
+
+	//old_brush = SelectObject( hdc, brush_red );
+	//RoundRect( hdc, curr_width - 20, 30, curr_width, 50, 10, 10 );
+	//TextOutA( hdc, curr_width - 15, 33, "A", 1 );
+	//if ( click && in_box( mx, my, curr_width - 20, 30, curr_width, 50 ) )
+	//{
+	//	maybe_parse_arena( hdc );
+	//}
+	//SelectObject( hdc, old_brush );
+	//parse_arena( hdc );
 	
 	static trajectory tr;
 
