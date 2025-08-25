@@ -1,6 +1,6 @@
 ﻿# 🎯 Graphwar Assistant
 
-This application generates equations for the game **Graphwar** that accurately approximate the path you want your graph to follow. The user plots a path on the screen, and the tool converts it into a chain of step functions, returning an expression that can be directly inserted into the game. The expression is automatically copied to the clipboard for easy use.
+This application generates equations for the game **Graphwar** that accurately approximates the path you want your graph to follow. The user plots a path on the screen, and the tool converts it into a chain of step functions, returning an expression that can be directly inserted into the game. The expression is automatically copied to the clipboard for easy use.
 
 
 Demo video
@@ -16,6 +16,7 @@ Demo video
 * Allows point-by-point construction of movement paths
 * Converts these paths into step equations
 * Automatically copies the result to the clipboard
+* A-Star Pathfinding
 
 ---
 
@@ -57,7 +58,8 @@ Demo video
 * Arena: Game view with the path plotted on top.
 * Coordinates: Just below the arena, showing the Graphwar (x,y) at the cursor position.
 * Status messages and guidance (e.g. "Cant go backwards", "Click on shooter...")
-
+* Bottom-left corner: Pathfinding control panel. Allows to modify resolution and pathfind.
+  
 ---
 
 ## 🧪 Output Format
@@ -77,7 +79,7 @@ k is change in height
 a is the steepness, hardcoded 100 
 c is the x coordinate of the step
 ```
-
+Output is automatically copied into clipboard.
 
 ---
 
@@ -93,5 +95,5 @@ c is the x coordinate of the step
 
 * **Shooter not found**: Ensure you click directly on the shooter and the game is running in the foreground.
 * **Equation not copying**: Specific error will be displayed in a message box.
-* **Not enough vertices**: At least two vertices are required to generate a path.
+* **Not enough vertices**: At least two vertices are required to generate a path. Also displayed when pathfinding fails due to obstacles. Try decreasing resolution if you believe a path is possible
 * **Any weird path behavior**: Reset the path using space bar. e.g. when path starts drawing in opposite of face direction
