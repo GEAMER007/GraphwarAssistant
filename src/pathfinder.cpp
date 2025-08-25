@@ -1,19 +1,62 @@
 #include "pathfinder.hpp"
 #include "unordered_map"
-//================================//
-//========work in progress========//
-//================================//
 
-const int block_arena_width = 49, block_arena_height = 29;
-const int block_size = 16;
-const int block_shift = 8;
-typedef char( &c_charmap )[ block_arena_height ][ block_arena_width ];
+int block_arena_width = 49, block_arena_height = 29;
+int block_size = 16;
+int block_shift = 8;
+int block_shift_2 = block_shift >> 1;
 
-static void simplify( std::vector<uint32_t> &pixels, long &bmw, int2 &lc, int2 &rc, c_charmap &map )
+int scale_level = 4;
+char **simplified_map = nullptr;
+char *simplified_map_proxyed = nullptr;
+void set_simplified_scale( int new_scale )
 {
-    for ( int by = lc.y; by < rc.y; by += block_size ) 
+	auto scale_diff = new_scale - scale_level;
+    scale_level = new_scale;
+
+    block_shift_2 += scale_diff;
+    block_shift = block_shift_2 << 1;
+
+    if ( scale_diff >= 0 )
     {
-        for ( int bx = lc.x; bx < rc.x; bx += block_size ) 
+        block_size <<= scale_diff;
+        block_arena_width >>= scale_diff;
+        block_arena_height >>= scale_diff;
+    }
+    else
+    {
+        block_size >>= -scale_diff;
+        block_arena_width <<= -scale_diff;
+        block_arena_height <<= -scale_diff;
+    }
+
+
+    if ( simplified_map_proxyed )
+    {
+        free( simplified_map_proxyed );
+		free( simplified_map );
+    }
+    auto min_size = block_arena_width * block_arena_height;
+    auto total_size = min_size & 7 ? ( ( min_size >> 3 ) + 1 ) << 3 : min_size;
+	// makes sure size is multiple of 8 for alignment
+
+    simplified_map_proxyed = reinterpret_cast< char * >( malloc( total_size ) );
+    simplified_map = reinterpret_cast< char ** >( malloc( ( block_arena_height + 1 ) * sizeof( char * ) ) );
+
+	for ( int i = 0; i < block_arena_height + 1; i++ )
+	{
+		simplified_map[ i ] = simplified_map_proxyed + i * block_arena_width;
+	}
+	
+}
+
+
+static void simplify( std::vector<uint32_t> &pixels, long &bmw, int2 &lc, int2 &rc, char **map, bool apply)
+{
+    auto off_mid = block_size >> 1;
+    for ( int by = lc.y; by < rc.y; by += block_size )
+    {
+        for ( int bx = lc.x; bx < rc.x; bx += block_size )
         {
             uint64_t r_sum = 0, g_sum = 0, b_sum = 0;
 
@@ -38,14 +81,19 @@ static void simplify( std::vector<uint32_t> &pixels, long &bmw, int2 &lc, int2 &
             uint8_t b_avg = static_cast< uint8_t >( b_sum >> block_shift );
             uint32_t avgColor = ( r_avg << 16 ) | ( g_avg << 8 ) | b_avg;
 
-            map[ ( by - lc.y ) >> ( block_shift >> 1 ) ][ ( bx - lc.x ) >> ( block_shift >> 1 ) ] = ( ( ( ( short( r_avg ) + g_avg + b_avg ) / 3 ) & 255 ) >> 4 );
-
-            for ( int y = by; y < by + block_size && y < rc.y; ++y ) 
+            if ( apply )
             {
-                for ( int x = bx; x < bx + block_size && x < rc.x; ++x )
+                for ( int y = by; y < by + block_size && y < rc.y; ++y ) 
                 {
-                    pixels[ y * bmw + x ] = ( avgColor >> 4 )<<4;
+                    for ( int x = bx; x < bx + block_size && x < rc.x; ++x )
+                    {
+                        pixels[ y * bmw + x ] = ( avgColor >> 4 ) << 4;
+                    }
                 }
+            }
+            else
+            {
+                map[ ( by - lc.y ) >> block_shift_2 ][ ( bx - lc.x ) >> block_shift_2 ] = ( ( ( ( short( r_avg ) + g_avg + b_avg ) / 3 ) & 255 ) >> 4 );
             }
         }
     }
@@ -158,50 +206,92 @@ static bool find_shooters( std::vector<uint32_t> &pixels, long &bmw, int2 &lc, i
     return has_active;
 }
 
-static void reconstruct_path( c_charmap &map, std::unordered_map<int2, int2> &came_from, int2 &start_node, int2 &end_node, std::vector<int2> &path )
+static void reconstruct_path( char **map, std::unordered_map<int2, int2> &came_from, int2 &start_node, int2 &lc, int2 &offset, int2 &correction, std::vector<int2> &useful )
 {
-    path.clear( );
-    int2 current = end_node;
+    int2 current = useful.back();
+    useful.pop_back( );
+    std::vector<int2> raw = { int2{ lc.x + ( current.x << block_shift_2 ), lc.y + ( current.y << block_shift_2 ) } + offset };
 
-    path.push_back( current );
     while ( came_from.contains( current ) )
     {
-		current = came_from[ current ];
-		path.push_back( current );
+        auto &t = came_from[ current ];
+        current = t;
+
+        raw.push_back( int2( lc.x + ( t.x << block_shift_2 ), lc.y + ( t.y << block_shift_2 ) ) + offset );
+        
     }
+    std::reverse( raw.begin( ), raw.end( ) );
+
+    if ( ( raw[ 1 ] - raw[ 0 ] ).y )
+    {
+        useful.push_back( raw[ 0 ] );
+    }
+
+	for ( int i = 1; i < raw.size( ) - 1; i++ )
+	{
+	    auto &current = raw[ i - 1 ];
+        auto &p = raw[ i ];
+        auto &p2 = raw[ i + 1 ];
+        
+		if ( p - current != p2 - p )
+		{
+			useful.push_back( p );
+		}
+	}
+    int2 &penultimate = *( raw.end( ) - 2 );
+    int2 &last = *( raw.end( ) - 1 );
+
+    if ( ( penultimate - last ).y )
+    {
+        last.y = correction.y;
+        last.x = penultimate.x;
+    }
+    else
+    {
+		last.x = correction.x;
+		last.y = penultimate.y;
+    }
+    useful.push_back( last );
+    useful.push_back( correction );
+
+    return;
+
 }
 
 const int2 neighbor_offsets[ ] =
 {
     {0,1}, {0,-1}, {1,0}
 };
-static bool pathfind( c_charmap &map, int2 &lc, int2 &rc, int2 &start, int2 &end, std::vector<int2> &path )
+static bool pathfind( char **map, int2 &lc, int2 &start, int2 &end, std::vector<int2> &path )
 {
-    int2 start_node = { ( ( start.x - lc.x ) / block_size, ( start.y - lc.y ) / block_size ) };
-	int2 end_node = { ( ( end.x - lc.x ) / block_size, ( end.y - lc.y ) / block_size ) };
+    int2 start_node = { ( start.x - lc.x ) / block_size, ( start.y - lc.y ) / block_size };
+	int2 end_node = { ( end.x - lc.x ) / block_size, ( end.y - lc.y ) / block_size };
+    int2 offset = { ( start.x - lc.x ) % block_size, ( start.y - lc.y ) % block_size };
+
 	auto open_set = std::vector<int2>{ start_node };
 
     auto came_from = std::unordered_map<int2, int2>{ };
-    auto g_score = std::unordered_map<int2, int>{ };
-    auto f_score = std::unordered_map<int2, int>{ };
-    g_score[ start_node ] = 0;
-    f_score[ start_node ] = int2::dist_sq( start_node, end_node );
+    auto g_score = std::unordered_map<int2, float>{ };
+    auto f_score = std::unordered_map<int2, float>{ };
+    g_score[ start_node ] = 0.0f;
+    f_score[ start_node ] = static_cast< float > ( sqrt( int2::dist_sq( start_node, end_node ) ) );
     while ( !open_set.empty( ) )
     {
         int2 current;
 		int min_f_score = INT_MAX;
         for ( const auto &node : open_set )
         {
-            if ( /*f_score.count( node ) &&*/ f_score[ node ] < min_f_score )
+            if ( f_score[ node ] < min_f_score )
             {
                 current = node;
-                min_f_score = f_score[ node ];
+                min_f_score = static_cast< int >( f_score[ node ] );
             }
 		}
 
         if ( current == end_node )
         {
-            reconstruct_path( map, came_from, start_node, end_node, path );
+            path.push_back( end_node );
+            reconstruct_path( map, came_from, start_node, lc, offset, end, path );
             return true;
         }
         auto it = std::find( open_set.begin( ), open_set.end( ), current );
@@ -217,19 +307,31 @@ static bool pathfind( c_charmap &map, int2 &lc, int2 &rc, int2 &start, int2 &end
         for ( int i = 0; i < 3; i++ )
         {
 			auto neighbor = current + neighbor_offsets[ i ];
-            if ( map[ neighbor.y ][ neighbor.x ] != 0x0f ) // empty block
+            if ( neighbor.y < 0 || neighbor.y >= block_arena_height || neighbor.x < 0 || neighbor.x >= block_arena_width )
             {
-                continue;
+				continue; // prevent out of bounds indexing
+            }
+
+            if ( map[ neighbor.y ][ neighbor.x ] != 0x0f ) 
+            {
+				continue; // avoid obstacles
 			}
             
-            auto tentative_gscore = g_score[ current ] + 1;
-            if ( tentative_gscore < g_score[ neighbor ] )
+            auto tentative_gscore = g_score[ current ] + 0.5f;
+            if ( came_from.count(current) && current - came_from[ current ] != neighbor )
+            {
+                tentative_gscore += 0.5f;
+            }
+            
+            auto current_g = g_score.count( neighbor ) ? g_score[ neighbor ] : INT_MAX;
+            if ( tentative_gscore < current_g )
             {
                 came_from[ neighbor ] = current;
                 g_score[ neighbor ] = tentative_gscore;
-                f_score[ neighbor ] = tentative_gscore + int2::dist_sq( neighbor, end_node );//h( neighbor );
+                f_score[ neighbor ] = tentative_gscore + static_cast< float > ( sqrt( int2::dist_sq( neighbor, end_node ) ) );
 				
                 bool found = false;
+                
                 for ( auto &node : open_set )
                 {
                     if( node == neighbor )
@@ -249,7 +351,7 @@ static bool pathfind( c_charmap &map, int2 &lc, int2 &rc, int2 &start, int2 &end
 
 }
 
-bool parse_arena( HDC &hdc )
+bool parse_arena( HDC &hdc, bool &found, std::vector<int2> &path, bool view_only )
 {
     auto hbmp = reinterpret_cast< HBITMAP >( GetCurrentObject( hdc, OBJ_BITMAP ) );
     auto bmp_info = BITMAP( );
@@ -278,26 +380,34 @@ bool parse_arena( HDC &hdc )
 	std::vector<int2> players;
     int2 muzzle;
 
-    char simplified_map[ block_arena_height ][ block_arena_width ];
-    if ( find_shooters( pixels, bmw, lc, rc, players, muzzle ) )
+    if ( view_only )
     {
         obstacles_only( pixels, bmw, lc, rc );
-        simplify( pixels, bmw, lc, rc, simplified_map );
+        simplify( pixels, bmw, lc, rc, simplified_map, true );
+    }
+    else if ( find_shooters( pixels, bmw, lc, rc, players, muzzle ) )
+    {
+        obstacles_only( pixels, bmw, lc, rc );
+        simplify( pixels, bmw, lc, rc, simplified_map, false );
         pixels[ muzzle.y * bmw + muzzle.x ] = 0x00FF0000;
         const int border = ( rc.x + lc.x ) >> 1;
+        path.push_back( muzzle );
+		std::sort( players.begin( ), players.end( ), compare_int2_x );
         for ( auto &player : players )
         {
-            if ( ( player.x < border && muzzle.x < border ) || ( player.x > border && muzzle.x > border ) )
+            if ( player.x < border )
             {
                 continue;
             }
             pixels[ player.y * bmw + player.x ] = 0x00FF00FF;
-			std::vector<int2> path;
-            if ( pathfind( simplified_map, lc, rc, muzzle, player, path ) )
+
+            if ( pathfind( simplified_map, lc, muzzle, player, path ) )
             {
-                printf( "path found\n" );
+                found = true;
+                muzzle = player + int2{ 4, 0 };
+                path.push_back( player );
+                path.push_back( muzzle );
             }
-            break;
         }
     }
     
@@ -305,8 +415,6 @@ bool parse_arena( HDC &hdc )
     {
         return false;
     }
-
-
 
     return true;
 }

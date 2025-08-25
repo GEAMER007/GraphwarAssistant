@@ -11,9 +11,13 @@ struct int2
     }
     inline int2 operator+( const int2 &other ) const
     {
-        return { x + other.x,y + other.y };
+        return { x + other.x, y + other.y };
     }
-    inline static int dist_sq( const int2 &a, const int2 &b )
+    inline int2 operator-( const int2 &other ) const
+    {
+        return { x - other.x, y - other.y };
+    }
+    inline static double dist_sq( const int2 &a, const int2 &b )
     {
 		return ( a.x - b.x ) * ( a.x - b.x ) + ( a.y - b.y ) * ( a.y - b.y );
     }
@@ -32,6 +36,12 @@ namespace std {
     };
 }
 
+inline bool compare_int2_x( const int2 &a, const int2 &b ) 
+{
+    return a.x < b.x;
+}
+
+
 struct trajectory
 {
     int state = 0;
@@ -45,7 +55,10 @@ struct trajectory
 //===========GUI utils============//
 //================================//
 
-#define in_box(px,py,bx,by,bw,bh) (px >= bx && px <= bx + bw && py >= by && py <= by + bh)
+inline bool in_box( int px, int py, int bx, int by, int bw, int bh )
+{
+    return px >= bx && px <= bx + bw && py >= by && py <= by + bh;
+}
 
 inline bool get_mouse_position( HWND hwnd, int &x, int &y )
 {
@@ -79,7 +92,7 @@ inline bool clicked_this_frame( HWND& hwnd )
 	return false;
 }
 
-inline bool ctrl_c( unsigned long bytes, const char* string )
+inline bool ctrl_c( unsigned long long bytes, const char* string )
 {
     if ( !OpenClipboard( g_hwnd ) ) 
     {
@@ -140,6 +153,19 @@ inline int is_grayscale( uint32_t color )
     int b = color & 0xFF;
     return ( r == g && g == b );
 }
+
+#define simple_red_rounded_button( hdc, x, y, w, h, text, click, callback )               \
+    {                                                                                     \
+        auto l = static_cast<int> ( strlen( text ) );                                     \
+	    auto old_brush = SelectObject( hdc, brush_red );                                  \
+        RoundRect( hdc, x, y, x + w, y + h, 10, 10 );                                     \
+        SIZE sz;                                                                          \
+        GetTextExtentPoint32A( hdc, text, l, &sz );                                       \
+        TextOutA( hdc, x + ( ( w - sz.cx ) >> 1 ), y + ( ( h - sz.cy ) >> 1 ), text, l ); \
+        if ( click && in_box( mx, my, x, y, w, h ) )                                      \
+        callback                                                                          \
+        SelectObject( hdc, old_brush );                                                   \
+    }
 
 //================================//
 //=====Coordinate translators=====//

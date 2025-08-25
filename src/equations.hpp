@@ -1,6 +1,6 @@
 #include "globals.hpp"
 
-inline std::string make_step( double k, double c, int a = -100 )
+inline std::string make_step( double k, double c, int a = -200 )
 {
 	// k / ( 1 + exp( -a * ( x + c ) ) )
 	std::string expression = "";

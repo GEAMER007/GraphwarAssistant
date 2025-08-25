@@ -4,6 +4,7 @@
 #include "windows.h"
 #include "vector"
 #include "string"
+#include "algorithm"
 
 extern HWND     g_hwnd;
 extern HWND g_target_window;
